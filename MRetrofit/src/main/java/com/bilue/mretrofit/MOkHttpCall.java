@@ -4,7 +4,6 @@ import java.io.IOException;
 
 import okhttp3.Callback;
 import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.ResponseBody;
 import okio.Buffer;
@@ -20,14 +19,10 @@ public class MOkHttpCall<T> implements MCall<T> {
 
     //当前的serviceApi方法执行者。里面有okhttpclient的引用等 可以用来创建call
     private final MServiceMethod serviceMethod;
-    private final Object[] args; //TODO hook方法是传递过来的参数 暂时不知道作用，还需要细查
-    //当前执行的Call 可以用来取消请求
-    private okhttp3.Call rowCall;
-
-    //可能其他线程中取消了请求，所以需要用volatile 立马更新缓存中canceled的值，让其他线程查询的时候得到最新的值。
-    private volatile boolean canceled;
-    //一个call只能执行一次 用于判断是否已经执行过了
-    private boolean executed;
+    private final Object[] args; //servicesApi.xxx(userName); 传递过来的参数  后续用于在serviceMethod里面生成一个request
+    private okhttp3.Call rawCall;//当前执行的Call 可以用来取消请求等
+    private volatile boolean canceled;//可能其他线程中取消了请求，所以需要用volatile 立马更新缓存中canceled的值，让其他线程查询的时候得到最新的值。
+    private boolean executed;//一个call只能执行一次 用于判断是否已经执行过了
 
     public MOkHttpCall(MServiceMethod serviceMethod,Object[] args) {
         this.serviceMethod = serviceMethod;
@@ -46,9 +41,9 @@ public class MOkHttpCall<T> implements MCall<T> {
 
             executed = true;
             //TODO 上面有个request的方法还不知道什么时候调用到， 调用 之后rowCall应该就是不是空了
-            call = rowCall;
+            call = rawCall;
             if (call == null) {
-                call = rowCall = creatCall();
+                call = rawCall = creatCall();
             }
             //请求之前检查是否取消了请求
             if (canceled) return;
@@ -71,15 +66,49 @@ public class MOkHttpCall<T> implements MCall<T> {
 
 
     @Override
-    public MResponse<T> execute() {
-        return null;
+    public MResponse<T> execute() throws IOException {
+        okhttp3.Call call;
+
+        synchronized (this) {
+            if (executed) throw new IllegalStateException("Already executed.");
+            executed = true;
+
+            //TODO 这个exception为什么是全局的原因暂时未知
+//            if (creationFailure != null) {
+//                if (creationFailure instanceof IOException) {
+//                    throw (IOException) creationFailure;
+//                } else {
+//                    throw (RuntimeException) creationFailure;
+//                }
+//            }
+
+            call = rawCall;
+            if (call == null) {
+                try {
+                    call = rawCall = creatCall();
+                } catch (RuntimeException e) {
+//                    creationFailure = e;
+                    throw e;
+                }
+            }
+        }
+
+        if (canceled) {
+            call.cancel();
+        }
+
+        return parseResponse(call.execute());
+
     }
 
 
     private okhttp3.Call creatCall(){
-        OkHttpClient okHttpClient = new OkHttpClient();
         Request request = new Request.Builder().url("https://api.github.com/users/octocat/repos").build();
-        okhttp3.Call call = okHttpClient.newCall(request);
+        //用户配置可配置httpclient 所以这里的okhttpclient是 serviceMethod里面的retrofit对象里面的okhttpclient
+        okhttp3.Call call = serviceMethod.callFactory.newCall(request);
+        if (call == null) {
+            throw new NullPointerException("Call.Factory returned null.");
+        }
         return call;
     }
 

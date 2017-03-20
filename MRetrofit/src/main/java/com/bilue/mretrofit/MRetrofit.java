@@ -35,15 +35,17 @@ public class MRetrofit {
     private HttpUrl baseUrl;    //okhttp的url
     final List<MCallAdapter.Factory> adapterFactories; //适配器 用于将请求后的OkHttpCall 转化成android Call，Rx的Observable，或者用户自己定义的类型
     private boolean  validateEagerly;  //TODO 暂时不知道意义  大概是  是否提前对业务接口中的注解进行验证转换的标志位
+    final Executor callbackExecutor;//可供用户配置的Exector ，如果用户没有配置 则直接使用Platform里面的exector
 
 
-    MRetrofit(okhttp3.Call.Factory callFactory, HttpUrl baseUrl, List<MCallAdapter.Factory> adapterFactories, boolean validateEagerly) {
+    MRetrofit(okhttp3.Call.Factory callFactory, HttpUrl baseUrl, List<MCallAdapter.Factory> adapterFactories, Executor callbackExecutor,boolean validateEagerly) {
         this.callFactory = callFactory;
         this.baseUrl = baseUrl;
 //        this.converterFactories = unmodifiableList(converterFactories); // Defensive copy at call site.
         this.adapterFactories = unmodifiableList(adapterFactories); // Defensive copy at call site.
 //        this.callbackExecutor = callbackExecutor;
         this.validateEagerly = validateEagerly;
+        this.callbackExecutor = callbackExecutor;
     }
 
     public Call.Factory callFactory() {
@@ -139,31 +141,6 @@ public class MRetrofit {
         return result;
     }
 
-//    public <T> T create(final Class<T> service) {
-//        Utils.validateServiceInterface(service);
-//        if (validateEagerly) {
-//            eagerlyValidateMethods(service);
-//        }
-//        return (T) Proxy.newProxyInstance(service.getClassLoader(), new Class<?>[] { service },
-//                new InvocationHandler() {
-//                    private final MPlatform platform = MPlatform.get();
-//
-//                    @Override public Object invoke(Object proxy, Method method, Object[] args)
-//                            throws Throwable {
-//                        // If the method is a method from Object then defer to normal invocation.
-//                        if (method.getDeclaringClass() == Object.class) {
-//                            return method.invoke(this, args);
-//                        }
-//                        if (platform.isDefaultMethod(method)) {
-//                            return platform.invokeDefaultMethod(method, service, proxy, args);
-//                        }
-//                        ServiceMethod<Object, Object> serviceMethod =
-//                                (ServiceMethod<Object, Object>) loadServiceMethod(method);
-//                        OkHttpCall<Object> okHttpCall = new OkHttpCall<>(serviceMethod, args);
-//                        return serviceMethod.callAdapter.adapt(okHttpCall);
-//                    }
-//                });
-//    }
 
 
 
@@ -223,7 +200,7 @@ public class MRetrofit {
                 callbackExecutor = platform.defaultCallbackExecutor();
             }
             adapterFactories.add(platform.defaultCallAdapterFactory(callbackExecutor));
-            return new MRetrofit(callFactory,baseUrl,adapterFactories,false);
+            return new MRetrofit(callFactory,baseUrl,adapterFactories,callbackExecutor,false);
         }
 
     }

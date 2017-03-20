@@ -1,5 +1,7 @@
 package com.bilue.mretrofit;
 
+import java.io.IOException;
+
 /**
  * Created by Bilue on 2017/3/19.
  */
@@ -20,5 +22,5 @@ public interface MCall<T> extends Cloneable {
     //实现复制接口
     MCall<T> clone();
     //同步操作 可以直接把数据返回
-    public MResponse<T> execute();
+    public MResponse<T> execute() throws IOException;
 }
