@@ -84,8 +84,23 @@ public class MOkHttpCall<T> implements MCall<T> {
     }
 
     //有可能是执行executed的时候检查，也有可能是enqueue的时候检查 所以需要加锁
-    synchronized private boolean isExecuted(){
+    public synchronized  boolean isExecuted(){
         return executed;
+    }
+
+    @Override
+    public void cancel() {
+
+    }
+
+    @Override
+    public boolean isCanceled() {
+        return false;
+    }
+
+    @Override
+    public MCall<T> clone() {
+        return null;
     }
 
 

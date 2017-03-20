@@ -24,7 +24,7 @@ public class MServiceMethod<R,T>{
     static final Pattern PARAM_NAME_REGEX = Pattern.compile(PARAM);
     //okhttpclient
     final okhttp3.Call.Factory callFactory;
-    final MCallAdapter<R, T> callAdapter;
+    final MCallAdapter<T, R> callAdapter;
 
     private final HttpUrl baseUrl;
 //    private final Converter<ResponseBody, R> responseConverter;
@@ -40,7 +40,7 @@ public class MServiceMethod<R,T>{
 
     MServiceMethod(Builder builder) {
         this.callFactory = builder.mRetrofit.callFactory();
-//        this.callAdapter = builder.callAdapter;
+        this.callAdapter = builder.callAdapter;
         this.baseUrl = builder.mRetrofit.baseUrl();
 //        this.responseConverter = builder.responseConverter;
         this.httpMethod = builder.httpMethod;
@@ -51,12 +51,11 @@ public class MServiceMethod<R,T>{
         this.isFormEncoded = builder.isFormEncoded;
         this.isMultipart = builder.isMultipart;
 //        this.parameterHandlers = builder.parameterHandlers;
-        callAdapter = null;
     }
 
 
 
-    static final class Builder<R,T>{
+    static final class Builder<T,R>{
         private MRetrofit mRetrofit; //retrofit 的引用，里面有okhttpclient，baseurl之类的对象
         private Method method;  //当前运行到的方法
         private Annotation[] methodAnnotations; //当前方法的注解
@@ -69,7 +68,7 @@ public class MServiceMethod<R,T>{
         private boolean hasBody;
         private boolean isFormEncoded;
         private boolean isMultipart;
-        MCallAdapter<R, T> callAdapter; //用于将Call的 实现者 Http的代理类 转化成 所需要的 实际call
+        MCallAdapter<T, R> callAdapter; //用于将Call的 实现者 Http的代理类 转化成 所需要的 实际call
 
         Builder(MRetrofit retrofit, Method method) {
             this.mRetrofit = retrofit;
@@ -84,7 +83,7 @@ public class MServiceMethod<R,T>{
         }
 
         //创建一个 设配器  用于 适配 当前请求所需要的返回类型
-        private MCallAdapter<R,T> createCallAdapter(){
+        private MCallAdapter<T,R> createCallAdapter(){
             Type returnType = method.getGenericReturnType();
             //检查返回类型是否是可以处理的值 数组，公共接口？ 通配符 不可以处理 TODO 此处还需要系统的学习一下反射
             if (MUtils.hasUnresolvableType(returnType)) {
@@ -98,7 +97,7 @@ public class MServiceMethod<R,T>{
             try {
                 //因为设配器支持用户配置， 所以需要绕回去 通过retrofit拿到设配器。
                 //TODO 这里源码中是T,R 但是这里用T R 会报错
-                return (MCallAdapter<R, T>) mRetrofit.callAdapter(returnType, annotations);
+                return (MCallAdapter<T, R>) mRetrofit.callAdapter(returnType, annotations);
             } catch (RuntimeException e) { // Wide exception range because factories are user code.
                 throw methodError(e, "Unable to create call adapter for %s", returnType);
             }

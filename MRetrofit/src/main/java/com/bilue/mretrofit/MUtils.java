@@ -10,7 +10,7 @@ import java.lang.reflect.WildcardType;
 /**
  * Created by Bilue on 2017/3/19.
  */
-
+//TODO Util里大部分方法的意义还需要进一步确认
 public class MUtils {
 
     static Class<?> getRawType(Type type) {
@@ -92,4 +92,26 @@ public class MUtils {
         throw new IllegalArgumentException("Expected a Class, ParameterizedType, or "
                 + "GenericArrayType, but <" + type + "> is of type " + className);
     }
+
+    static Type getCallResponseType(Type returnType) {
+        if (!(returnType instanceof ParameterizedType)) {
+            throw new IllegalArgumentException(
+                    "Call return type must be parameterized as Call<Foo> or Call<? extends Foo>");
+        }
+        return getParameterUpperBound(0, (ParameterizedType) returnType);
+    }
+
+    static Type getParameterUpperBound(int index, ParameterizedType type) {
+        Type[] types = type.getActualTypeArguments();
+        if (index < 0 || index >= types.length) {
+            throw new IllegalArgumentException(
+                    "Index " + index + " not in range [0," + types.length + ") for " + type);
+        }
+        Type paramType = types[index];
+        if (paramType instanceof WildcardType) {
+            return ((WildcardType) paramType).getUpperBounds()[0];
+        }
+        return paramType;
+    }
+
 }

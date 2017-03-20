@@ -1,9 +1,10 @@
 package com.bilue.mretrofit;
 
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 
 import java.util.concurrent.Executor;
-
 
 
 /**
@@ -11,27 +12,27 @@ import java.util.concurrent.Executor;
  */
 
 //用于生成平台的Executor 因为是retrofit 是Android/Java的请求库。
-public class Platform {
-    private static final Platform PLATFORM = findPlatform();
+public class MPlatform {
+    private static final MPlatform PLATFORM = findPlatform();
 
-    public static Platform get(){
+    public static MPlatform get(){
         return PLATFORM;
     }
 
-    private static Platform findPlatform(){
+    private static MPlatform findPlatform(){
         try {
             Class.forName("android.os.Build");
             if (Build.VERSION.SDK_INT != 0) {
-                return new Platform.Android();
+                return new MPlatform.Android();
             }
         } catch (ClassNotFoundException ignored) {
         }
         try {
             Class.forName("java.util.Optional");
-            return new Platform.Java8();
+            return new MPlatform.Java8();
         } catch (ClassNotFoundException ignored) {
         }
-        return new Platform();
+        return new MPlatform();
     }
 
     Executor getDefaultExcutor(){return null;};
@@ -45,12 +46,28 @@ public class Platform {
 
     }
 
+    Executor defaultCallbackExecutor() {
+        return null;
+    }
 
-    static class Java8 extends Platform{
+
+    static class Java8 extends MPlatform {
 
     }
 
-    static class Android extends Platform{
+    static class Android extends MPlatform {
+        @Override
+        Executor defaultCallbackExecutor() {
+            return new MainExecutor();
+        }
 
+
+        class MainExecutor implements Executor{
+            private final Handler handler = new Handler(Looper.getMainLooper());
+            @Override
+            public void execute(Runnable command) {
+                handler.post(command);
+            }
+        }
     }
 }
