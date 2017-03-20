@@ -3,6 +3,7 @@ package com.bilue.sourcesimulation;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.TextView;
 
 import com.bilue.mretrofit.MCall;
 import com.bilue.mretrofit.MCallBack;
@@ -12,8 +13,11 @@ import com.bilue.mretrofit.MRetrofit;
 import com.bilue.sourcesimulation.api.GitHubService;
 import com.bilue.sourcesimulation.bean.Repo;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
+import okhttp3.Cache;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import retrofit2.Call;
@@ -24,11 +28,12 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class MainActivity extends AppCompatActivity {
 
+    private TextView tv_test;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        tv_test = (TextView) findViewById(R.id.tv_test);
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl("https://api.github.com/")
                 .addConverterFactory(GsonConverterFactory.create())
@@ -36,18 +41,20 @@ public class MainActivity extends AppCompatActivity {
 
         GitHubService gitHubServices = retrofit.create(GitHubService.class);
 
-        Call<List<Repo>> reposCall = gitHubServices.listRepos("octocat");
+        final Call<List<Repo>> reposCall = gitHubServices.listRepos("octocat");
 
         reposCall.enqueue(new Callback<List<Repo>>() {
             @Override
             public void onResponse(Call<List<Repo>> call, Response<List<Repo>> response) {
                 Log.e("onResponse_retrofit","response is "+response);
-
+                tv_test.setText("TEST");
             }
 
             @Override
             public void onFailure(Call<List<Repo>> call, Throwable t) {
                 Log.e("onFailure_retrofit","the failure is "+t.getMessage());
+                tv_test.setText("onFailure");
+
             }
         });
 
@@ -64,29 +71,39 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        File file = new File(getExternalCacheDir().toString(),"cache");
+        if (!file.exists()){
+            file.mkdir();
+        }
+        int cacheSize = 1*1024*1024;
+        Cache cache = new Cache(file,cacheSize);
 
-        OkHttpClient okHttpClient = new OkHttpClient();
+        OkHttpClient okHttpClient = new OkHttpClient.Builder()
+                .cache(cache)
+                .build();
         Request request = new Request.Builder()
                 .url("https://api.github.com/users/octocat/repos")
                 .build();
-//        okhttp3.MCall call = okHttpClient.newCall(request);
-//        call.enqueue(new okhttp3.Callback() {
-//            @Override
-//            public void onFailure(okhttp3.MCall call, IOException e) {
-//                Log.e("onFailure_okhttp","the failure is "+e.getMessage());
-//
-//            }
-//
-//            @Override
-//            public void onResponse(okhttp3.MCall call, okhttp3.MResponse response) throws IOException {
-//                Log.e("onResponse_okhttp","response is "+response);
-//
-//            }
-//        });
+        okhttp3.Call call = okHttpClient.newCall(request);
+        call.enqueue(new okhttp3.Callback() {
+            @Override
+            public void onFailure(okhttp3.Call call, IOException e) {
+                Log.e("onFailure_okhttp","the failure is "+e.getMessage());
 
+            }
+
+            @Override
+            public void onResponse(okhttp3.Call call, okhttp3.Response response) throws IOException {
+                Log.e("onResponse_okhttp","cacheResponse is "+response.cacheResponse());
+                Log.e("onResponse_okhttp","response is "+response.networkResponse());
+
+//                Log.e("onResponse_okhttp","response is "+response);
+
+            }
+        });
 
         MRetrofit mRetrofit = new MRetrofit.Builder()
-                .baseUrl("https://api.github.com/users/octocat/repos")
+                .baseUrl("https://api.github.com/")
                 .build();
 
 

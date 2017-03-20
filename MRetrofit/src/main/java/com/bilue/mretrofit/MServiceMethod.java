@@ -97,7 +97,8 @@ public class MServiceMethod<R,T>{
             Annotation[] annotations = method.getAnnotations();
             try {
                 //因为设配器支持用户配置， 所以需要绕回去 通过retrofit拿到设配器。
-                return (MCallAdapter<T, R>) MRetrofit.callAdapter(returnType, annotations);
+                //TODO 这里源码中是T,R 但是这里用T R 会报错
+                return (MCallAdapter<R, T>) mRetrofit.callAdapter(returnType, annotations);
             } catch (RuntimeException e) { // Wide exception range because factories are user code.
                 throw methodError(e, "Unable to create call adapter for %s", returnType);
             }

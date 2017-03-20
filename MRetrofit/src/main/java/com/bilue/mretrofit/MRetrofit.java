@@ -32,7 +32,7 @@ public class MRetrofit {
 
     private HttpUrl baseUrl;    //okhttp的url
     //TODO 这个是MCallAdapter  还没有弄好
-    final List<CallAdapter.Factory> adapterFactories; //适配器 用于将请求后的OkHttpCall 转化成android Call，Rx的Observable，或者用户自己定义的类型
+    final List<MCallAdapter.Factory> adapterFactories; //适配器 用于将请求后的OkHttpCall 转化成android Call，Rx的Observable，或者用户自己定义的类型
     private boolean  validateEagerly;  //TODO 暂时不知道意义  大概是  是否提前对业务接口中的注解进行验证转换的标志位
 
     public MRetrofit(Call.Factory callFactory,HttpUrl httpUrl){
@@ -41,7 +41,7 @@ public class MRetrofit {
         adapterFactories = null;
     }
 
-    MRetrofit(okhttp3.Call.Factory callFactory, HttpUrl baseUrl, List<CallAdapter.Factory> adapterFactories, boolean validateEagerly) {
+    MRetrofit(okhttp3.Call.Factory callFactory, HttpUrl baseUrl, List<MCallAdapter.Factory> adapterFactories, boolean validateEagerly) {
         this.callFactory = callFactory;
         this.baseUrl = baseUrl;
 //        this.converterFactories = unmodifiableList(converterFactories); // Defensive copy at call site.
@@ -86,24 +86,26 @@ public class MRetrofit {
 
 
     //一个请求 会从用户配的适配器列表拿出设配器出来
-    public CallAdapter<?, ?> callAdapter(Type returnType, Annotation[] annotations) {
+    public MCallAdapter<?, ?> callAdapter(Type returnType, Annotation[] annotations) {
         return nextCallAdapter(null, returnType, annotations);
     }
 
 
-    public CallAdapter<?, ?> nextCallAdapter(CallAdapter.Factory skipPast, Type returnType,
+    public MCallAdapter<?, ?> nextCallAdapter(CallAdapter.Factory skipPast, Type returnType,
                                              Annotation[] annotations) {
         checkNotNull(returnType, "returnType == null");
         checkNotNull(annotations, "annotations == null");
 
+        //TODO skipPath暂时不知道作用。
         int start = adapterFactories.indexOf(skipPast) + 1;
+        //遍历适配器工厂， 在需要的时候才会生成adapter出来
         for (int i = start, count = adapterFactories.size(); i < count; i++) {
-            CallAdapter<?, ?> adapter = adapterFactories.get(i).get(returnType, annotations, this);
+            MCallAdapter<?, ?> adapter = adapterFactories.get(i).get(returnType, annotations, this);
             if (adapter != null) {
                 return adapter;
             }
         }
-
+        //报错的信息
         StringBuilder builder = new StringBuilder("Could not locate call adapter for ")
                 .append(returnType)
                 .append(".\n");
@@ -167,27 +169,13 @@ public class MRetrofit {
 //    }
 
 
-//
-//    MServiceMethod loadServiceMethod(Method method) {
-//        MServiceMethod result = serviceMethodCache.get(method);
-//        if (result != null) return result;
-//
-//        synchronized (serviceMethodCache) {
-//            result = serviceMethodCache.get(method);
-//            if (result == null) {
-//                result = new MServiceMethod.Builder<>(this, method).build();
-//                serviceMethodCache.put(method, result);
-//            }
-//        }
-//        return result;
-//    }
 
     public final static class Builder{
         //平台 Java8 之类的
 //        private final Platform platform;
         private okhttp3.Call.Factory callFactory;
         private HttpUrl baseUrl;
-        private final List<CallAdapter.Factory> adapterFactories = new ArrayList<>();
+        private final List<MCallAdapter.Factory> adapterFactories = new ArrayList<>();
 
         public Builder client(OkHttpClient client) {
             return callFactory(checkNotNull(client, "client == null"));
@@ -215,7 +203,7 @@ public class MRetrofit {
         }
 
         //可以添加其他的call类型  用以支持其他类型
-        public Builder addCallAdapterFactory(CallAdapter.Factory factory) {
+        public Builder addCallAdapterFactory(MCallAdapter.Factory factory) {
             adapterFactories.add(checkNotNull(factory, "factory == null"));
             return this;
         }
@@ -229,7 +217,7 @@ public class MRetrofit {
                 callFactory = new OkHttpClient();
             }
             // Make a defensive copy of the adapters and add the default Call adapter.
-            List<CallAdapter.Factory> adapterFactories = new ArrayList<>(this.adapterFactories);
+            List<MCallAdapter.Factory> adapterFactories = new ArrayList<>(this.adapterFactories);
 //            adapterFactories.add(platform.defaultCallAdapterFactory(callbackExecutor));
             //TODO 这里应该和平台有关才对，暂时先用固定的
 //            adapterFactories.add(platform.defaultCallAdapterFactory(callbackExecutor));
