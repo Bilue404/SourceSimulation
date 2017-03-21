@@ -103,7 +103,9 @@ public class MOkHttpCall<T> implements MCall<T> {
 
 
     private okhttp3.Call creatCall(){
-        Request request = new Request.Builder().url("https://api.github.com/users/octocat/repos").build();
+//        Request request = new Request.Builder().url("https://api.github.com/users/octocat/repos").build();
+
+        Request request = serviceMethod.toRequest();
         //用户配置可配置httpclient 所以这里的okhttpclient是 serviceMethod里面的retrofit对象里面的okhttpclient
         okhttp3.Call call = serviceMethod.callFactory.newCall(request);
         if (call == null) {
